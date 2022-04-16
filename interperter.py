@@ -1,131 +1,98 @@
 from pprint import pformat
 from numpy import product
 import os
-from Coordinate import Coordinate
+from Classes import Coordinate,Request,Customer,Hub,Product,Depot
 import matplotlib.pyplot as plt
 import math
 import json
 import sys
 
-def read_instance(path):
-    # Read instance
-    # print(instance_sub_file,instance_num)
-    parent_dir= os.path.dirname(os.path.realpath(__file__))+'/Instances'
-    instance = open(os.path.join(parent_dir,path), "r")
 
-    DATASET = instance.readline().split()[2]
+class Instance():
 
-    instance.readline()
+    def __init__(self,filename):
+        parent_dir=os.path.dirname(os.path.realpath(__file__))+'/Instances'
+        self.instance=open(os.path.join(parent_dir,filename), "r")
 
-    DAYS = int(instance.readline().split()[2])
-    TRUCK_CAPACITY = int(instance.readline().split()[2])
-    TRUCK_MAX_DISTANCE = int(instance.readline().split()[2])
-    VAN_CAPACITY = int(instance.readline().split()[2])
-    VAN_MAX_DISTANCE = int(instance.readline().split()[2])
+    def capitalized(self,var):
+        return var.isupper()
+    
+    def read_fixed_vars(self,line):
+        try:
+            exec(f'self.__class__.{line[0]} = {line[2]}')
+        except:
+            return None
 
-    instance.readline()
+    def read_hubs(self):
+        self.depot=None
+        self.hubs=[]
+        new_line=self.instance.readline()
+        while new_line.strip():
+            splitted_new_line=new_line.split()
+            self.hubs.append(Hub(int(splitted_new_line[0]),int(splitted_new_line[1]),[int(i) for i in splitted_new_line[2].split(',')]))
+            new_line=self.instance.readline()
+    
+    def read_locations(self):
+        self.locations=[]
+        new_line=self.instance.readline()
+        while new_line.strip():
+            splitted_new_line=new_line.split()
+            self.locations.append(Coordinate(int(splitted_new_line[0]),int(splitted_new_line[1]),int(splitted_new_line[2])))
+            new_line=self.instance.readline()
+        self.depot=Depot(1,self.locations[0])
+        for i in range(1,1+self.HUBS):  
+            self.hubs[i-1].set_location(self.locations[i])
 
-    TRUCK_DISTANCE_COST = int(instance.readline().split()[2])
-    TRUCK_DAY_COST = int(instance.readline().split()[2])
-    TRUCK_COST = int(instance.readline().split()[2])
-    VAN_DISTANCE_COST = int(instance.readline().split()[2])
-    VAN_DAY_COST = int(instance.readline().split()[2])
-    VAN_COST = int(instance.readline().split()[2])
+    def read_products(self):
+        self.products=[]
+        new_line=self.instance.readline()
+        while new_line.strip():
+            splitted_new_line=new_line.split()
+            self.products.append(Product(int(splitted_new_line[0]),int(splitted_new_line[1])))
+            new_line=self.instance.readline()
 
-    instance.readline()
+    def read_requests(self):
+        self.requests=[]
+        new_line=self.instance.readline()
+        while new_line.strip():
+            splitted_new_line=new_line.split()
+            product_dict=dict(zip(self.products, [int(splitted_new_line[3+i]) for i in range(len(self.products))]))
+            self.requests.append(Request(int(splitted_new_line[0]),int(splitted_new_line[1]),[location for location in self.locations if location.id==int(splitted_new_line[2])][0],product_dict))
+            new_line=self.instance.readline()
+    
+    def connect_hub_to_request(self):
+        for hub in self.hubs:
+            for i,req in enumerate(hub.possible_request):
+                hub.possible_request[i]=[request for request in self.requests if request.id==req][0]
 
-    DELIVER_EARLY_PENALTY = int(instance.readline().split()[2])
-
-    instance.readline()
-
-    NUMBER_OF_PRODUCTS = int(instance.readline().split()[2])
-
-    products = {}
-
-    for i in range(NUMBER_OF_PRODUCTS):
-        line = instance.readline().split()
-        products[int(line[0])] = int(line[1])
-
-    instance.readline()
-
-    NUMBER_OF_HUBS = int(instance.readline().split()[2])
-
-    hubs = {}
-
-    for i in range(NUMBER_OF_HUBS):
-        line = instance.readline().split()
-        hubs[int(line[0])] = {
-            'location': i + 2,
-
-            'cost': int(line[1]),
+    def read_line(self):
+        for line in self.instance:
+            next_line=self.read_next_line(line) 
+            if next_line:
+                if self.capitalized(next_line[0]):
+                    self.read_fixed_vars(next_line)
+                    if next_line[0]=='PRODUCTS':
+                        self.read_products()
+                    elif next_line[0]=='HUBS':
+                        self.read_hubs()
+                    elif next_line[0]=='LOCATIONS':
+                        self.read_locations()
+                    elif next_line[0]=='REQUESTS':
+                        self.read_requests()
+        self.connect_hub_to_request()
+        del self.locations
+        del self.products
+        del self.requests
             
-            # Possible for Delivery
-            'PFD': [int(i) for i in line[2].split(',')]
-        }
-
-    # print(hubs)
-
-
-    instance.readline()
-
-    NUMBER_OF_LOCATIONS = int(instance.readline().split()[2])
-    depot_line = instance.readline().split()
-    DEPOT_COORDINATE=Coordinate(int(depot_line[1]), int(depot_line[2]))
+    def read_next_line(self,line):
+        while True:
+            if not line.strip(): return None
+            return line.split()
 
 
-    for i in (range(NUMBER_OF_HUBS)):
-        line = instance.readline().split()
-        hubs[i+1]['location'] = Coordinate(int(line[1]), int(line[2]))
-    locations = {}
 
-    for i in range(NUMBER_OF_LOCATIONS-NUMBER_OF_HUBS-1):
-        line = instance.readline().split()
-        locations[int(line[0])] = Coordinate(int(line[1]), int(line[2]))
-    instance.readline()
-
-    dict_to_json={'depot_xy':[[]],'customer_xy':[[]]}
-
-    for hub in hubs.values():
-        dict_to_json['depot_xy'][0].append([hub['location'].get_x(),hub['location'].get_y()])
-
-
-    NUMBER_OF_REQUESTS = int(instance.readline().split()[2])
-
-    requests = {}
-
-    for i in range(NUMBER_OF_REQUESTS):
-        line = instance.readline().split()
-
-        requests[int(line[0])] = {
-            'request_day': int(line[1]),
-            'location': locations[int(line[2])],
-            'num_of_products': {key: int(value) for (key, value) in enumerate(line[3].split(','))}
-        }
-
-    request_day=set([day['request_day'] for day in requests.values()])
-    request_products=[day['num_of_products'] for day in requests.values()]
-    print(request_products)
-    sys.exit()
-    for key,value in requests[int(line[0])]['num_of_products'].items():
-        for location in locations.values():
-            dict_to_json['customer_xy'][0].append([location.get_x(),location.get_y()])
-            print(dict_to_json)
-
-
-    instance.close()
-
-    depot_x=DEPOT_COORDINATE.get_x()
-    depot_y=DEPOT_COORDINATE.get_y()
-
-    hub_x=[]
-    hub_y=[]
-
-    for _,value in hubs.items():
-        hub_x.append(value['location'].get_x())
-        hub_y.append(value['location'].get_y())
-
-for folder in os.listdir('Instances'):
-    if os.path.isdir('Instances/'+folder): 
-        for file in os.listdir('Instances/'+folder):
-            read_instance(folder+"/"+file)
-    #  callthecommandhere(blablahbla, filename, foo)
+new_file='Instance_1-10/Instance_1.txt'
+new_instance=Instance(new_file)
+new_instance.read_line()
+print(new_instance.DAYS)
+print(new_instance.__dict__)
