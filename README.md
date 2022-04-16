@@ -1,3 +1,3 @@
 # GA-MDVRP
 Genetic Algorithm approach to the MDVRP problem
-![Alt text](images/Class Diagram.drawio.png?raw=true "Class Diagram Interpreter")
+![Alt text](https://github.com/Bentgm17/GA-MDVRP/blob/main/images/Class%20Diagram.drawio.png "Class Diagram Interpreter")
