@@ -50,20 +50,24 @@ class Instance():
             splitted_new_line=new_line.split()
             self.products.append(Product(int(splitted_new_line[0]),int(splitted_new_line[1])))
             new_line=self.instance.readline()
+        self.MIN_DAYS_FRESH=min([product.days_fresh for product in self.products])
+
 
     def read_requests(self):
         self.requests=[]
         new_line=self.instance.readline()
         while new_line.strip():
             splitted_new_line=new_line.split()
-            product_dict=dict(zip(self.products, [int(splitted_new_line[3+i]) for i in range(len(self.products))]))
-            self.requests.append(Request(int(splitted_new_line[0]),int(splitted_new_line[1]),[location for location in self.locations if location.id==int(splitted_new_line[2])][0],product_dict))
+            product_dict=dict(zip(self.products, map(int,splitted_new_line[3].split(','))))
+            costumer=Customer(int(splitted_new_line[2]),[location for location in self.locations if location.id==int(splitted_new_line[2])][0])
+            self.requests.append(Request(int(splitted_new_line[0]),int(splitted_new_line[1]),costumer,product_dict))
             new_line=self.instance.readline()
+        self.PERIOD=max([request.day for request in self.requests])
     
     def connect_hub_to_request(self):
         for hub in self.hubs:
-            for i,req in enumerate(hub.possible_request):
-                hub.possible_request[i]=[request for request in self.requests if request.id==req][0]
+            for i,req in enumerate(hub.possible_requests):
+                hub.possible_requests[i]=[request for request in self.requests if request.id==req][0]
 
     def read_line(self):
         for line in self.instance:
@@ -82,17 +86,9 @@ class Instance():
         self.connect_hub_to_request()
         del self.locations
         del self.products
-        del self.requests
             
     def read_next_line(self,line):
         while True:
             if not line.strip(): return None
             return line.split()
 
-
-
-new_file='Instance_1-10/Instance_1.txt'
-new_instance=Instance(new_file)
-new_instance.read_line()
-print(new_instance.DAYS)
-print(new_instance.__dict__)

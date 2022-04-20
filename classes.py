@@ -4,7 +4,7 @@ class Hub:
         self.cost=cost
         self.loc=None
         self.closest_customers = []
-        self.possible_request = pos_req
+        self.possible_requests = pos_req
 
     def __repr__(self):
         return str(self.id)
@@ -28,7 +28,7 @@ class Depot:
 class Customer:
     def __init__(self, cid, coordinate):
         self.id = cid
-        self.coordinate = coordinate
+        self.loc = coordinate
     
     def __repr__(self):
         return str(self.id)
@@ -52,17 +52,23 @@ class Coordinate:
         return (self.get_cor() == other.get_cor())
 
 class Request:
-    def __init__(self, rid, day, costumer, demand):
+    def __init__(self, rid, day, customer, demand):
         self.id = rid
         self.day = day
-        self.costumer = costumer
+        self.customer = customer
         self.demand = demand
+        self.multiple_request_ids=False
     
     def __repr__(self):
         return str(self.id)
     
     def __eq__(self, other):
         return self.id == other.id
+
+    def add_double_order(self,demand):
+        self.multiple_request_ids=True
+
+        self.id=[self.id]
 
 class Product():
     def __init__(self, pid, days_fresh):
